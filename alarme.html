@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Lembrete compartilhado – Não Esquece</title>
+<meta property="og:title" content="Lembrete compartilhado – Não Esquece">
+<meta property="og:description" content="Toque para adicionar este lembrete ao seu Não Esquece.">
+<meta property="og:image" content="https://aanjelaa.github.io/naoesquece-privacidade/icone.png">
+<link rel="icon" href="icone.png">
+<style>
+  :root {
+    --fundo: #FDF8F0;
+    --cartao: #FFFFFF;
+    --texto: #0E3B43;
+    --suave: #5B6B6E;
+    --linha: #EDE5D8;
+    --destaque: #1F6F6A;
+    --ouro: #F2B530;
+    --nota: #FFF8E6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--fundo);
+    color: var(--texto);
+    line-height: 1.5;
+  }
+  main { max-width: 480px; margin: 0 auto; padding: 24px 16px 40px; }
+  .marca { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .marca img { width: 48px; height: 48px; border-radius: 12px; }
+  .marca span { font-weight: 700; font-size: 1.1rem; }
+  .cartao {
+    background: var(--cartao);
+    border: 1px solid var(--linha);
+    border-radius: 20px;
+    padding: 22px 20px;
+  }
+  .rotulo { font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--suave); font-weight: 600; }
+  h1 { font-size: 1.5rem; margin: 6px 0 2px; line-height: 1.25; overflow-wrap: anywhere; }
+  .hora { font-size: 2.6rem; font-weight: 300; color: var(--destaque); margin: 10px 0 0; }
+  .quando { color: var(--suave); margin: 0 0 14px; }
+  .linha { display: flex; gap: 8px; padding: 10px 0; border-top: 1px solid var(--linha); font-size: .95rem; }
+  .linha b { min-width: 92px; color: var(--suave); font-weight: 600; }
+  .nota {
+    background: var(--nota);
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin-top: 12px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .botao {
+    display: block; width: 100%; text-align: center; text-decoration: none;
+    background: var(--destaque); color: #fff; font-weight: 700; font-size: 1.05rem;
+    padding: 16px; border-radius: 999px; margin-top: 20px; border: 0;
+  }
+  .botao:active { opacity: .85; }
+  .dica { font-size: .9rem; color: var(--suave); margin-top: 14px; text-align: center; }
+  .dica a { color: var(--destaque); font-weight: 600; }
+  .privado { font-size: .8rem; color: var(--suave); margin-top: 24px; text-align: center; }
+  .privado a { color: var(--destaque); }
+  .erro { text-align: center; }
+  .oculto { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <div class="marca">
+    <img src="icone.png" alt="">
+    <span>Não Esquece</span>
+  </div>
+
+  <div id="lembrete" class="cartao oculto">
+    <div class="rotulo">Lembrete compartilhado com você</div>
+    <h1 id="titulo"></h1>
+    <p class="hora" id="hora"></p>
+    <p class="quando" id="quando"></p>
+    <div class="linha"><b>Repete</b><span id="repete"></span></div>
+    <div class="linha" id="linhaAvisos"><b>Avisos</b><span id="avisos"></span></div>
+    <div class="nota oculto" id="nota"></div>
+
+    <a class="botao" id="adicionar" href="#">Adicionar ao meu Não Esquece</a>
+    <p class="dica" id="dicaAndroid">Precisa ter o app <b>Não Esquece</b> instalado neste celular.<br>
+      Ainda não tem? <a id="loja" href="https://play.google.com/store/apps/details?id=br.com.naoesquece">Baixe na Google Play</a></p>
+    <p class="dica oculto" id="dicaOutro">Abra este link num <b>celular Android</b> com o app Não Esquece instalado para adicionar o lembrete.</p>
+  </div>
+
+  <div id="invalido" class="cartao erro oculto">
+    <h1>Link incompleto</h1>
+    <p class="quando">Esse link de lembrete chegou cortado. Peça para a pessoa compartilhar de novo pelo app.</p>
+  </div>
+
+  <p class="privado">Os dados deste lembrete estão só dentro do link — não ficam guardados em nenhum servidor.<br>
+    <a href="./">Política de privacidade</a></p>
+</main>
+
+<script>
+(function () {
+  var AVISOS = [5, 15, 30, 60, 1440, 4320, 10080];
+  var NOMES_AVISO = ["5 min", "15 min", "30 min", "1 h", "1 dia", "3 dias", "1 semana"];
+  // bits iguais ao app: (1 << Calendar.DAY_OF_WEEK), domingo = 1 ... sábado = 7
+  var DIAS = [[2, "Seg"], [3, "Ter"], [4, "Qua"], [5, "Qui"], [6, "Sex"], [7, "Sáb"], [1, "Dom"]];
+  var TODOS = 254, SEG_A_SEX = 124, FIM_DE_SEMANA = 130;
+
+  function $(id) { return document.getElementById(id); }
+  function mostrar(id) { $(id).classList.remove("oculto"); }
+  function dois(n) { return (n < 10 ? "0" : "") + n; }
+
+  function decodificar(codigo) {
+    var b64 = codigo.replace(/-/g, "+").replace(/_/g, "/");
+    while (b64.length % 4) b64 += "=";
+    var bin = atob(b64);
+    var bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return JSON.parse(new TextDecoder("utf-8").decode(bytes));
+  }
+
+  function repeteTexto(w) {
+    if (!w) return "Uma vez";
+    if (w === TODOS) return "Todo dia";
+    if (w === SEG_A_SEX) return "Segunda a sexta";
+    if (w === FIM_DE_SEMANA) return "Fim de semana";
+    var nomes = [];
+    DIAS.forEach(function (d) { if (w & (1 << d[0])) nomes.push(d[1]); });
+    return nomes.join(", ");
+  }
+
+  var codigo = (location.hash || "").replace(/^#/, "");
+  var r;
+  try {
+    if (!codigo) throw new Error("vazio");
+    r = decodificar(codigo);
+    if (typeof r !== "object" || r === null) throw new Error("inválido");
+  } catch (e) {
+    mostrar("invalido");
+    return;
+  }
+
+  $("titulo").textContent = r.t || "Lembrete";
+  $("hora").textContent = dois(r.h | 0) + ":" + dois(r.m | 0);
+  if (r.d) {
+    var p = String(r.d).split("-");
+    var data = new Date(+p[0], +p[1] - 1, +p[2], 12);
+    $("quando").textContent = isNaN(data) ? "" :
+      data.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" });
+  } else {
+    $("quando").textContent = "";
+  }
+  $("repete").textContent = repeteTexto(r.w | 0);
+
+  var av = [];
+  AVISOS.forEach(function (_, i) { if ((r.a | 0) & (1 << i)) av.push(NOMES_AVISO[i] + " antes"); });
+  if (av.length) $("avisos").textContent = av.join(", ");
+  else $("linhaAvisos").classList.add("oculto");
+
+  if (r.n) { $("nota").textContent = "📝 " + r.n; mostrar("nota"); }
+
+  var android = /Android/i.test(navigator.userAgent);
+  var loja = $("loja").href;
+  var intent = "intent://lembrete#Intent;scheme=naoesquece;package=br.com.naoesquece;S.d=" +
+    encodeURIComponent(codigo) + ";S.browser_fallback_url=" + encodeURIComponent(loja) + ";end";
+  if (android) {
+    $("adicionar").href = intent;
+  } else {
+    $("adicionar").classList.add("oculto");
+    $("dicaAndroid").classList.add("oculto");
+    mostrar("dicaOutro");
+  }
+  document.title = (r.t || "Lembrete") + " – Não Esquece";
+  mostrar("lembrete");
+})();
+</script>
+</body>
+</html>
