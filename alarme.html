@@ -85,7 +85,9 @@
     <a class="botao" id="adicionar" href="#">Adicionar ao meu Não Esquece</a>
     <p class="dica" id="dicaAndroid">Precisa ter o app <b>Não Esquece</b> instalado neste celular.<br>
       Ainda não tem? <a id="loja" href="https://play.google.com/store/apps/details?id=br.com.naoesquece">Baixe na Google Play</a></p>
-    <p class="dica oculto" id="dicaOutro">Abra este link num <b>celular Android</b> com o app Não Esquece instalado para adicionar o lembrete.</p>
+    <p class="dica oculto" id="dicaPC">Funciona com o <b>Não Esquece para Windows</b> aberto neste computador.<br>
+      Se o botão não abrir o app, copie este link (Ctrl+C) e abra o Não Esquece: ele oferece adicionar o lembrete.</p>
+    <p class="dica oculto" id="dicaOutro">Abra este link num <b>celular Android</b> ou num <b>computador Windows</b> com o app Não Esquece para adicionar o lembrete.</p>
   </div>
 
   <div id="invalido" class="cartao erro oculto">
@@ -162,8 +164,14 @@
   var loja = $("loja").href;
   var intent = "intent://lembrete#Intent;scheme=naoesquece;package=br.com.naoesquece;S.d=" +
     encodeURIComponent(codigo) + ";S.browser_fallback_url=" + encodeURIComponent(loja) + ";end";
+  var windows = /Windows/i.test(navigator.userAgent);
   if (android) {
     $("adicionar").href = intent;
+  } else if (windows) {
+    $("adicionar").href = "naoesquece://lembrete?d=" + codigo;
+    $("adicionar").textContent = "Adicionar ao Não Esquece do computador";
+    $("dicaAndroid").classList.add("oculto");
+    mostrar("dicaPC");
   } else {
     $("adicionar").classList.add("oculto");
     $("dicaAndroid").classList.add("oculto");
